@@ -1,0 +1,5 @@
+% If there are config to work with
+const config = {
+  listPerPage: 10,
+};
+module.exports = config;
