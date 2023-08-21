@@ -255,6 +255,7 @@ async function getIdentity(customer) {
                         secondaryIds.add(arr[i].id);
                     }
                 })
+                primaryContractIds.add(data[0].id);
             }
         }).catch(err => {
             console.log("ERR", err.message);
