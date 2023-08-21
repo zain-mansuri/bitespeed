@@ -5,7 +5,7 @@
 - Running on localhost 3000
     - Create new
    ```sh
-   curl --location 'http://localhost:3000/' \
+   curl --location 'https://zain-bitespeed.onrender.com/' \
     --header 'Content-Type: application/json' \
     --data-raw '{
       "phoneNumber" : "717171",
@@ -15,7 +15,7 @@
 
   - Get identity
   ```sh
-  curl --location 'http://localhost:3000/identity' \
+  curl --location 'https://zain-bitespeed.onrender.com/identity' \
     --header 'Content-Type: application/json' \
     --data-raw '{
       "phoneNumber" : "717171",
