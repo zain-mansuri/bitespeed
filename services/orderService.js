@@ -110,7 +110,7 @@ async function getCustomer(phone, email) {
  * @param linkPrecedence
  * @returns {Promise<unknown>}
  */
-async function getCustomerByColumnName(columnName, value, linkPrecedence) {
+async function getCustomerByColumnName(columnName, value, linkPrecedence=null) {
     return new Promise((resolve, reject) => {
         let buildQuery = `SELECT *
                           from customer
@@ -247,15 +247,18 @@ async function getIdentity(customer) {
             } else {
                 phoneArray.add(customer.phone);
                 emailArray.add(customer.email);
+                primaryContractIds.add(data[0].id);
                 await getCustomerByColumnName("linkedId", data[0].id).then(arr => {
-                    for (let i = 0; i < arr.length; i++) {
-                        phoneArray.add(arr[i].phoneNumber);
-                        emailArray.add(arr[i].email);
-                        primaryContractIds.add(arr[i].linkedId);
-                        secondaryIds.add(arr[i].id);
+                    if(!_.isEmpty(arr)) {
+                        for (let i = 0; i < arr.length; i++) {
+                            phoneArray.add(arr[i].phoneNumber);
+                            emailArray.add(arr[i].email);
+                            primaryContractIds.add(arr[i].linkedId);
+                            secondaryIds.add(arr[i].id);
+                        }
                     }
                 })
-                primaryContractIds.add(data[0].id);
+
             }
         }).catch(err => {
             console.log("ERR", err.message);
