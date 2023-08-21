@@ -1,6 +1,6 @@
 const _ = require("lodash");
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./test.db');
+const db = new sqlite3.Database('./test_test.db');
 
 /**
  * Get Customer By Id
@@ -10,8 +10,9 @@ const db = new sqlite3.Database('./test.db');
 async function getCustomerById(id) {
     console.log("Get By Id", id);
     return new Promise((resolve, reject) => {
-        return db.get(`SELECT * FROM customer WHERE id = ${id}`, (err, row) => {
-            console.log("Id->",row);
+        return db.get(`SELECT *
+                       FROM customer
+                       WHERE id = ${id}`, (err, row) => {
             if (_.isEmpty(row)) {
                 resolve(null);
             } else {
@@ -30,7 +31,8 @@ async function createCustomer(customer) {
     process.env.count = parseInt(process.env.count) + 1;
     return new Promise((resolve, reject) => {
         return db.run(`INSERT INTO customer('id', 'email', 'phoneNumber', 'linkPrecedence')
-            VALUES (${process.env.count}, '${customer.email}', '${customer.phone}', '${customer.linkPrecedence}')`, [], function (error) {
+                       VALUES (${process.env.count}, '${customer.email}', '${customer.phone}',
+                               '${customer.linkPrecedence}')`, [], function (error) {
             if (error) {
                 console.error(error.message);
                 reject(error.message);
@@ -50,7 +52,8 @@ async function createSecondaryCustomer(customer) {
     process.env.count = parseInt(process.env.count) + 1;
     return new Promise((resolve, reject) => {
         return db.run(`INSERT INTO customer('id', 'email', 'phoneNumber', 'linkPrecedence', 'linkedId')
-            VALUES (${process.env.count}, '${customer.email}', '${customer.phone}', '${customer.linkPrecedence}', ${customer.linkedId})`, [], function (error) {
+                       VALUES (${process.env.count}, '${customer.email}', '${customer.phone}',
+                               '${customer.linkPrecedence}', ${customer.linkedId})`, [], function (error) {
             if (error) {
                 console.error(error.message);
                 reject(error.message);
@@ -93,7 +96,6 @@ async function getCustomerByPhone(phone, type) {
  */
 async function getCustomer(phone, email) {
     return await getCustomerByEmailPhone(phone, email).then(data => {
-        console.log("Customer", data);
         return data;
     }).catch(err => {
         console.log("ERR", err.message);
@@ -110,7 +112,9 @@ async function getCustomer(phone, email) {
  */
 async function getCustomerByColumnName(columnName, value, linkPrecedence) {
     return new Promise((resolve, reject) => {
-        let buildQuery = `SELECT * from customer where ${columnName} = '${value}'`;
+        let buildQuery = `SELECT *
+                          from customer
+                          where ${columnName} = '${value}'`;
         buildQuery = _.isEmpty(linkPrecedence) ? buildQuery : buildQuery + ` AND linkPrecedence = '${linkPrecedence}'`;
         console.log(buildQuery);
         return db.all(buildQuery, (err, row) => {
@@ -125,7 +129,10 @@ async function getCustomerByColumnName(columnName, value, linkPrecedence) {
 
 async function getCustomerByEmailPhone(phone, email) {
     return new Promise((resolve, reject) => {
-        return db.all(`SELECT * from customer where phoneNumber = '${phone}' AND email = '${email}'`, (err, row) => {
+        return db.all(`SELECT *
+                       from customer
+                       where phoneNumber = '${phone}'
+                         AND email = '${email}'`, (err, row) => {
             if (_.isEmpty(row)) {
                 resolve(null);
             } else {
@@ -141,10 +148,14 @@ async function getCustomerByEmailPhone(phone, email) {
  * @returns {Promise<unknown>}
  */
 async function updateCustomerRecord(customer) {
-    console.log("update Customer", customer.id, customer);
     return new Promise((resolve, reject) => {
 
-        return db.run(`UPDATE customer SET email="${customer.email}", phoneNumber="${customer.phoneNumber}", linkPrecedence="${customer.linkPrecedence}", linkedId=${customer.linkedId} WHERE id=${customer.id}`, [], function (error) {
+        return db.run(`UPDATE customer
+                       SET email="${customer.email}",
+                           phoneNumber="${customer.phoneNumber}",
+                           linkPrecedence="${customer.linkPrecedence}",
+                           linkedId=${customer.linkedId}
+                       WHERE id = ${customer.id}`, [], function (error) {
             if (error) {
                 console.error(error.message);
                 reject(error.message);
@@ -159,9 +170,15 @@ async function updateAllSecondaryCustomer(customer, linkId) {
     // get All by email
     console.log("Update aa 2nd ", linkId);
     await getCustomerByEmail(customer.email, "All").then(arr => {
-        console.log("Record length", arr.length);
         for (let i = 0; i < arr.length; i++) {
             if (arr[i].id !== linkId) {
+                getCustomerByColumnName("linkedId", arr[i].id).then(records => {
+                    for (let i = 0; i < records.length; i++) {
+                        records[i].linkPrecedence = "secondary";
+                        records[i].linkedId = linkId
+                        updateCustomerRecord(records[i]);
+                    }
+                })
                 arr[i].linkPrecedence = "secondary";
                 arr[i].linkedId = linkId
                 updateCustomerRecord(arr[i]);
@@ -171,9 +188,15 @@ async function updateAllSecondaryCustomer(customer, linkId) {
     // get all by phone
     console.log("Update phone")
     await getCustomerByPhone(customer.phone, "All").then(arr => {
-        console.log("phone Record length", arr.length);
         for (let i = 0; i < arr.length; i++) {
             if (arr[i].id !== linkId) {
+                getCustomerByColumnName("linkedId", arr[i].id).then(records => {
+                    for (let i = 0; i < records.length; i++) {
+                        records[i].linkPrecedence = "secondary";
+                        records[i].linkedId = linkId
+                        updateCustomerRecord(records[i]);
+                    }
+                })
                 arr[i].linkPrecedence = "secondary";
                 arr[i].linkedId = linkId
                 updateCustomerRecord(arr[i]);
@@ -192,15 +215,40 @@ async function getIdentity(customer) {
     let emailArray = new Set();
     let secondaryIds = new Set();
     let primaryContractIds = new Set();
-    if(!_.isEmpty(customer.phone)) {
+    if (!_.isEmpty(customer.phone)) {
+        // try to get primary data
         await getCustomerByColumnName("phoneNumber", customer.phone, 'primary').then(async data => {
-            if(_.isEmpty(data)) {
-                phoneArray.push(customer.phone);
-            } else {
-                await getCustomerByColumnName("linkedId", data[0].id).then(arr => {
-                    console.log("Array linkedId", arr.length);
-                    for (let i = 0; i < arr.length; i++) {
+            if (_.isEmpty(data)) {
+                phoneArray.add(customer.phone);
+                // Humm.... primary data is Empty, Let's get secondary data And Also primary one.
+                await getCustomerByColumnName("phoneNumber", customer.phone).then(async result => {
+                    if (!_.isEmpty(result)) {
+                        for (let i = 0; i < result.length; i++) {
+                            await getCustomerByColumnName("linkedId", result[0].linkedId).then(arr => {
+                                for (let i = 0; i < arr.length; i++) {
+                                    phoneArray.add(arr[i].phoneNumber);
+                                    emailArray.add(arr[i].email);
+                                    primaryContractIds.add(arr[i].linkedId);
+                                    secondaryIds.add(arr[i].id);
+                                }
+                            })
+                        }
 
+                        // This is primary data
+                        await getCustomerById(result[0].linkedId).then(customer => {
+                            phoneArray.add(customer.phoneNumber);
+                            emailArray.add(customer.email);
+                            primaryContractIds.add(customer.id);
+                            secondaryIds.add(result[0].id);
+                        })
+                    }
+                    // this number is not registered.
+                })
+            } else {
+                phoneArray.add(customer.phone);
+                emailArray.add(customer.email);
+                await getCustomerByColumnName("linkedId", data[0].id).then(arr => {
+                    for (let i = 0; i < arr.length; i++) {
                         phoneArray.add(arr[i].phoneNumber);
                         emailArray.add(arr[i].email);
                         primaryContractIds.add(arr[i].linkedId);
@@ -212,30 +260,9 @@ async function getIdentity(customer) {
             console.log("ERR", err.message);
         })
     }
-
-    if(!_.isEmpty(customer.email)) {
-        await getCustomerByColumnName("email", customer.email, 'primary').then(async data => {
-            if(_.isEmpty(data)) {
-                emailArray.push(customer.email);
-            } else {
-                await getCustomerByColumnName("linkedId", data[0].id).then(arr => {
-                    console.log("Array linkedId", arr.length);
-                    for (let i = 0; i < arr.length; i++) {
-                        phoneArray.add(arr[i].phoneNumber);
-                        emailArray.add(arr[i].email);
-                        primaryContractIds.add(arr[i].linkedId);
-                        secondaryIds.add(arr[i].id);
-                    }
-                })
-            }
-        }).catch(err => {
-            console.log("ERR", err.message);
-        })
-    }
-
     return {
-        phoneArray : Array.from(phoneArray),
-        emailArray : Array.from(emailArray),
+        phoneArray: Array.from(phoneArray),
+        emailArray: Array.from(emailArray),
         primaryContatctId: Array.from(primaryContractIds),
         secondaryContactIds: Array.from(secondaryIds)
     }

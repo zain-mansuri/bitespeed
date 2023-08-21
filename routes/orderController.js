@@ -4,10 +4,10 @@ const orderService = require('../services/orderService');
 const _ = require("lodash");
 
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./test.db');
+const db = new sqlite3.Database('./test_test.db');
 
 // Get Identity
-router.post('/identity', async function (req, res, next) {
+async function formatIdentityInformation(req, res, next) {
     try {
         console.log("Identity")
         let customer = {
@@ -16,7 +16,7 @@ router.post('/identity', async function (req, res, next) {
         }
         await orderService.getIdentity(customer).then(contact => {
             console.log("All Record ", contact);
-            res.json( {
+            res.json({
                 contact
             })
         });
@@ -25,10 +25,10 @@ router.post('/identity', async function (req, res, next) {
         console.error(`Error while getting programming languages `, err.message);
         next(err);
     }
-});
+}
 
 // Create new order/Customer
-router.post('/', async function (req, res, next) {
+router.post('/identity', async function (req, res, next) {
     try {
         let phone = req.body.phoneNumber;
         let email = req.body.email;
@@ -46,16 +46,14 @@ router.post('/', async function (req, res, next) {
         // Customer found
         if (!_.isEmpty(customer)) {
             console.log("Customer found");
-            return res.json(customer);
+            return await formatIdentityInformation(req, res, next);
         }
         // find by email
         await orderService.getCustomerByEmail(email).then(record => {
             emailCustomer = record;
         });
-        console.log("Email", emailCustomer)
         // find by phone
         await orderService.getCustomerByPhone(phone).then(record => {
-            console.log("Record phone", record);
             phoneCustomer = record;
         });
         // Create new primary account
@@ -68,17 +66,15 @@ router.post('/', async function (req, res, next) {
             };
 
             await orderService.createCustomer(customer).then(async customerId => {
-                console.log("CustomerId", customerId);
                 await orderService.updateAllSecondaryCustomer(customer, customerId);
-                await orderService.getCustomerById(customerId).then(data => {
+                await orderService.getCustomerById(customerId).then(async data => {
                     // turn Primary record to secondary and assign this link
-                    return res.json(data);
+                    return await formatIdentityInformation(req, res, next);
                 })
             });
         }
         // create new phone linked account
         else if (!_.isEmpty(phoneCustomer)) {
-            console.log("Phone Customer", phoneCustomer);
 
             let customer = {
                 phone: phone,
@@ -87,16 +83,14 @@ router.post('/', async function (req, res, next) {
                 linkedId: phoneCustomer.id
             };
             await orderService.createSecondaryCustomer(customer).then(async customerId => {
-                console.log("CustomerId", customerId);
-                await orderService.getCustomerById(customerId).then(data => {
-                    return res.json(data);
+                await orderService.getCustomerById(customerId).then(async data => {
+                    return await formatIdentityInformation(req, res, next);
                 })
             });
 
         }
         // create email linked account
         else if (!_.isEmpty(emailCustomer)) {
-            console.log("Email Customer", emailCustomer);
             let customer = {
                 phone: phone,
                 email: email,
@@ -105,24 +99,21 @@ router.post('/', async function (req, res, next) {
             };
 
             await orderService.createSecondaryCustomer(customer).then(async customerId => {
-                console.log("CustomerId", customerId);
-                await orderService.getCustomerById(customerId).then(data => {
-                    return res.json(data);
+                await orderService.getCustomerById(customerId).then(async data => {
+                    return await formatIdentityInformation(req, res, next);
                 })
             });
 
         } else {
             // just create one!!!!
-            console.log("Else")
             let customer = {
                 phone: phone,
                 email: email,
                 linkPrecedence: 'primary'
             }
             await orderService.createCustomer(customer).then(async customerId => {
-                console.log("CustomerId", customerId);
-                await orderService.getCustomerById(customerId).then(data => {
-                    return res.json(data);
+                await orderService.getCustomerById(customerId).then(async data => {
+                    return await formatIdentityInformation(req, res, next);
                 })
             });
         }

@@ -4,7 +4,7 @@ const port = 8080;
 var _ = require('lodash');
 
 const sqlite3 = require('sqlite3').verbose();
-const db = new sqlite3.Database('./test.db');
+const db = new sqlite3.Database('./test_test.db');
 
 
 const orderControllerRoute = require("./routes/orderController");
@@ -34,6 +34,7 @@ app.listen(port, () => {
 
     db.serialize(() => {
 
+        // Create Table if Not Exist
         db.run(`
             CREATE TABLE IF NOT EXISTS customer (
                 'id' int(11) NOT NULL,
